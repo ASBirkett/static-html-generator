@@ -2,7 +2,7 @@ from textnode import  TextNode, TextType
 from htmlnode import HTMLNode
 
 def main():
-    test_node = TextNode("Some test text", TextType.NORMAL, "www.google.com")
+    test_node = TextNode("Some test text", TextType.TEXT, "www.google.com")
     print(test_node)
 
     
