@@ -1,5 +1,6 @@
 from textnode import TextNode, TextType
 from leafnode import LeafNode
+import re
 
 def split_nodes_delimiter(old_nodes, delimiter, text_type) -> list[TextNode]:
     nodes = []
@@ -40,8 +41,23 @@ def text_node_to_html_node(text_node):
             return LeafNode("img", "", { "src" : f"{text_node.url}", "alt" : f"{text_node.text}" })
         case _:
             raise Exception("Invalid text node type")
- 
 
-# node = TextNode("This is text with a **code block** word", TextType.TEXT)
-# new_nodes = split_nodes_delimiter([node], "**", TextType.BOLD)
-# print(f"New node value: {new_nodes}")
+def extract_markdown_images(text) -> list[tuple]:
+    extract_tuple_list = []
+
+    potential_images = re.findall(r"!\[(.*?)\]\((.*?)\)", text)
+
+    for image_set in potential_images:
+        extract_tuple_list.append(image_set)
+
+    return extract_tuple_list
+
+def extract_markdown_links(text) -> list[tuple]:
+    extract_tuple_list = []
+
+    potential_links = re.findall(r"\[(.*?)\]\((.*?)\)", text)
+
+    for link_set in potential_links:
+        extract_tuple_list.append(link_set)
+
+    return extract_tuple_list
