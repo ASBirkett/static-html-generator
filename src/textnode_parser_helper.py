@@ -61,3 +61,33 @@ def extract_markdown_links(text) -> list[tuple]:
         extract_tuple_list.append(link_set)
 
     return extract_tuple_list
+
+def split_nodes_image(old_nodes):
+    text_nodes = []
+
+    for node in old_nodes:
+        split_nodes = re.split(r"(!\[.*?\]\(.*?\))", node.text)
+        for split_node in split_nodes:
+            potential_image_extract = extract_markdown_images(split_node)
+            if len(potential_image_extract) > 0:
+                text_nodes.append(TextNode(potential_image_extract[0][0], TextType.IMAGE, potential_image_extract[0][1]))
+            else:
+                if len(split_node) > 0:
+                    text_nodes.append(TextNode(split_node, TextType.TEXT))            
+
+    return text_nodes
+
+def split_nodes_link(old_nodes):
+    text_nodes = []
+
+    for node in old_nodes:
+        split_nodes = re.split(r"(\[.*?\]\(.*?\))", node.text)
+        for split_node in split_nodes:
+            potential_link_extract = extract_markdown_links(split_node)
+            if len(potential_link_extract) > 0:
+                text_nodes.append(TextNode(potential_link_extract[0][0], TextType.LINK, potential_link_extract[0][1]))
+            else:
+                if len(split_node) > 0:
+                    text_nodes.append(TextNode(split_node, TextType.TEXT))            
+
+    return text_nodes
