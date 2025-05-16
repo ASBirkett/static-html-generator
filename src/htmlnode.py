@@ -1,7 +1,7 @@
 from typing import Self
 
 class HTMLNode():
-    def __init__(self, tag = None, value = None, children: list[Self] = None, props : dict = None):
+    def __init__(self, tag = None, value = None, children = None, props : dict = None):
         self.tag = tag
         self.value = value
         self.children = children
@@ -12,6 +12,9 @@ class HTMLNode():
     
     def props_to_html(self) -> str:
         return_value = ""
+
+        if self.props == None:
+            return return_value
 
         for name, value in self.props.items():
             return_value += f" {name}=\"{value}\""

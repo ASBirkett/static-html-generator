@@ -1,4 +1,5 @@
-from textnode import TextNode, TextType
+from textnode import TextNode, TextType, BlockType
+from parentnode import ParentNode
 from leafnode import LeafNode
 import re
 
@@ -27,7 +28,7 @@ def split_nodes_delimiter(old_nodes: list[TextNode], delimiter: str, text_type: 
 
     return nodes
 
-def text_node_to_html_node(text_node: TextNode):
+def text_node_to_html_node(text_node: TextNode) -> LeafNode:
     match text_node.text_type:
         case TextType.TEXT:
             return LeafNode(None, text_node.text)
@@ -100,7 +101,7 @@ def split_nodes_link(old_nodes: list[TextNode]) -> list[TextNode]:
 
     return text_nodes
 
-def text_to_textnodes(text: str):
+def text_to_textnodes(text: str) -> list[TextNode]:
     node = TextNode(text, TextType.TEXT)
     final_nodes = [node]
     final_nodes = split_nodes_delimiter(final_nodes, "`", TextType.CODE)
@@ -110,7 +111,7 @@ def text_to_textnodes(text: str):
     final_nodes = split_nodes_link(final_nodes)
     return final_nodes
 
-def markdown_to_blocks(markdown) -> list[str]:
+def markdown_to_blocks(markdown : str) -> list[str]:
     text_blocks = []
 
     raw_blocks = markdown.split("\n\n")
@@ -121,3 +122,133 @@ def markdown_to_blocks(markdown) -> list[str]:
             text_blocks.append(block)
 
     return text_blocks
+
+def block_to_block_type(block : str) -> BlockType:
+    match block:
+        case p if bool(re.match(r"^#{1,6} .*", p)):
+            return BlockType.HEADING
+        case p if bool(re.fullmatch(r"^`{3}.*`{3}$", p, re.DOTALL)):
+            return BlockType.CODE
+        case p if bool(re.match(r"^>.*", p)):
+            return BlockType.QUOTE
+        case p if bool(re.match(r"^- .*", p)):
+            lines = p.split('\n')
+            for line in lines:
+                if not bool(re.match(r"^- .*", line)):
+                    return BlockType.PARAGRAPH
+            return BlockType.UNORDERED_LIST
+        case p if bool(re.match(r"1\. .*", p)):
+            lines = p.split('\n')
+            expected_number = 0
+            for line in lines:
+                expected_number += 1
+                if not bool(re.match(rf"{expected_number}\. .*", line)):
+                    return BlockType.PARAGRAPH
+            return BlockType.ORDERED_LIST
+        case _:
+            return BlockType.PARAGRAPH
+        
+
+def markdown_to_html_node(markdown: str) -> ParentNode:
+    blocks = markdown_to_blocks(markdown)
+    nodes = []
+
+    for block in blocks:
+        block_type = block_to_block_type(block)
+        match block_type:
+            case BlockType.HEADING:
+                nodes.append(__create_heading_html_node(block))
+            case BlockType.QUOTE:
+                nodes.append(__create_quote_html_node(block))
+            case BlockType.ORDERED_LIST:
+                nodes.append(__create_ordered_list_html_node(block))
+            case BlockType.UNORDERED_LIST:
+                nodes.append(__create_unordered_list_html_node(block))
+            case BlockType.CODE:
+                nodes.append(__create_code_html_node(block))
+            case _: #PARAGRAPH
+                nodes.append(__create_paragraph_html_node(block))
+    
+    return ParentNode('div', nodes)
+
+
+def __create_paragraph_html_node(block_str: str) -> ParentNode:
+    text_nodes = text_to_textnodes(block_str.replace('\n', ' '))
+    html_nodes = []
+    for text_node in text_nodes:
+        html_nodes.append(text_node_to_html_node(text_node))
+    new_parent_node = ParentNode('p', html_nodes)
+    return new_parent_node
+
+def __create_code_html_node(block_str: str) -> ParentNode:
+    code_text_node = TextNode(block_str, TextType.TEXT)
+    code_text_nodes = split_nodes_delimiter([code_text_node], '```', TextType.CODE)
+    code_text_nodes[0].text = code_text_nodes[0].text.strip().replace('\n', '\n')
+    code_html = text_node_to_html_node(code_text_nodes[0])
+    return ParentNode('pre', [code_html])
+
+def __create_heading_html_node(block_str: str) -> ParentNode:
+    split_header = re.split(r"^(#{1,6} )", block_str)
+    header_hash_count = len(split_header[1]) - 1
+    header_text_nodes = text_to_textnodes(split_header[2])[0]
+    return ParentNode(f"h{header_hash_count}", [text_node_to_html_node(header_text_nodes)])
+
+def __create_quote_html_node(block_str: str) -> ParentNode:
+    quote_text = re.split(r"(^>)", block_str, re.MULTILINE)
+    quote_text_node = text_to_textnodes(quote_text[2].replace('\n', '\\n'))
+    return ParentNode('quote', [text_node_to_html_node(quote_text_node[0])])
+
+def __create_ordered_list_html_node(block_str: str) -> ParentNode:
+    list_items = []
+    split_block_str = re.findall(r"(\d+\.\s+.*?)(?=\n|$)", block_str)
+    for item in split_block_str:
+        list_items.append(LeafNode('li', item))
+    return ParentNode('ol', list_items)
+
+def __create_unordered_list_html_node(block_str: str) -> ParentNode:
+    list_items = []
+    split_block_str = re.findall(r"(-\s+.*?)(?=\n|$)", block_str)
+    for item in split_block_str:
+        list_items.append(LeafNode('li', item))
+    return ParentNode('ul', list_items)
+
+
+
+
+
+
+# md = """### This is a header
+
+# This is a **bolded** paragraph
+# text in a p
+# tag here
+
+# This is another paragraph with _italic_ text and `code` here
+
+# ```Check this out
+# int thing = 55;
+# thing += 10;```
+
+# >This is a quote block.
+# This line should also be apart of the quote block
+
+
+# - Item 1
+# - Item 2
+# - Item 3
+# - Item 4
+
+# 1. Get materials
+# 2. Read instructions
+# 3. Make Food
+# """
+
+# md = """
+# ```
+# This is text that _should_ remain
+# the **same** even with inline stuff
+# ```
+# """
+
+# node = markdown_to_html_node(md)
+# print(node.to_html())
