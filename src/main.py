@@ -1,5 +1,6 @@
 from textnode import  TextNode, TextType
 from htmlnode import HTMLNode
+from textnode_parser_helper import generate_page
 
 import os
 import shutil
@@ -7,11 +8,15 @@ import shutil
 SOURCE_DIR = './static'
 DESTINATION_DIR = './public'
 
+SOURCE_CONTENT = './content/index.md'
+SOURCE_TEMPLATE = './template.html'
+
 def main():
     if clear_folder_contents(SOURCE_DIR):
         print("Clear complete")
         if copy_contents_of_source_to_destination(SOURCE_DIR, DESTINATION_DIR):
             print("Copy complete")
+            generate_page(SOURCE_CONTENT, SOURCE_TEMPLATE, os.path.join(DESTINATION_DIR, "index.html"))
         else:
             print("Copy failed")
     else:

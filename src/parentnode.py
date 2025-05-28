@@ -12,7 +12,12 @@ class ParentNode(HTMLNode):
         if self.children == None:
             raise ValueError("Parent node must have at least one child")
         
-        final_element = f"<{self.tag}>"
+        final_element = ""
+
+        if self.props == None:
+            final_element = f"<{self.tag}>"
+        else:
+            final_element = f"<{self.tag} {self.props_to_html()}>"
 
         for child in self.children:
             final_element += child.to_html()

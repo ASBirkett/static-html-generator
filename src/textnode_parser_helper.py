@@ -2,6 +2,7 @@ from textnode import TextNode, TextType, BlockType
 from parentnode import ParentNode
 from leafnode import LeafNode
 import re
+import os
 
 def __make_delimiter_regex_safe(delimiter: str) -> str:
     match delimiter:
@@ -194,29 +195,86 @@ def __create_heading_html_node(block_str: str) -> ParentNode:
     return ParentNode(f"h{header_hash_count}", [text_node_to_html_node(header_text_nodes)])
 
 def __create_quote_html_node(block_str: str) -> ParentNode:
-    quote_text = re.split(r"(^>)", block_str, re.MULTILINE)
-    quote_text_node = text_to_textnodes(quote_text[2].replace('\n', '\\n'))
-    return ParentNode('quote', [text_node_to_html_node(quote_text_node[0])])
+    quote_texts = re.findall(r"(^>.*)", block_str, re.MULTILINE)
+    final_quote_text = ""
+    for quote_text in quote_texts:
+        final_quote_text += quote_text.replace("> ", "")
+    print(final_quote_text)
+    quote_text_node = TextNode(final_quote_text, TextType.TEXT)
+    return ParentNode('blockquote', [text_node_to_html_node(quote_text_node)])
 
 def __create_ordered_list_html_node(block_str: str) -> ParentNode:
     list_items = []
-    split_block_str = re.findall(r"(\d+\.\s+.*?)(?=\n|$)", block_str)
-    for item in split_block_str:
-        list_items.append(LeafNode('li', item))
+    ordered_item_lines = re.findall(r"(\d+\.\s+.*?)(?=\n|$)", block_str)
+    num_prefix = 0
+    for line in ordered_item_lines:
+        num_prefix += 1
+        text_nodes = text_to_textnodes(line.replace(f"{num_prefix}. ", ""))
+        current_line_parent = ParentNode('li', [])
+        for text_node in text_nodes:
+            current_line_parent.children.append(text_node_to_html_node(text_node))
+        list_items.append(current_line_parent)
     return ParentNode('ol', list_items)
 
 def __create_unordered_list_html_node(block_str: str) -> ParentNode:
     list_items = []
-    split_block_str = re.findall(r"(-\s+.*?)(?=\n|$)", block_str)
-    for item in split_block_str:
-        list_items.append(LeafNode('li', item))
+    unordered_item_lines = re.findall(r"(-\s+.*?)(?=\n|$)", block_str)
+    for line in unordered_item_lines:
+        text_nodes = text_to_textnodes(line.replace("- ", ""))
+        current_line_parent = ParentNode('li', [])
+        for text_node in text_nodes:
+            current_line_parent.children.append(text_node_to_html_node(text_node))
+        list_items.append(current_line_parent)
     return ParentNode('ul', list_items)
 
+def extract_title(markdown) -> str:
+    potential_title = re.findall(r"^(#{1} .*)", markdown)
+    if len(potential_title) == 0:
+        raise Exception("Markdown must start with a header tag that contains one (1) hash (#)")
+    split_header = re.split(r"^(#{1} )", potential_title[0])
+    
+    return split_header[2]
+        
+def generate_page(from_path: str, template_path: str, dest_path: str):
+    print(f"Generating page from \"{from_path}\" to \"{dest_path}\" using \"{template_path}\" as the template")
+    content_markdown = __read_content_from_file(from_path)
+    template_html = __read_content_from_file(template_path)
+    
+    converted_markdown_html = markdown_to_html_node(content_markdown).to_html()
+
+    content_title = extract_title(content_markdown)
+
+    template_html = template_html.replace("{{ Title }}", f"{content_title}")
+    template_html = template_html.replace("{{ Content }}", converted_markdown_html)
+    
+    dir_name = os.path.dirname(dest_path)
+    if not os.path.exists(dir_name):
+        os.mkdir(dir_name)
+
+    write_result = __write_content_to_file(dest_path, template_html)
+
+    return write_result
 
 
 
 
 
+
+def __read_content_from_file(file_path: str) -> str:
+    with open(file_path, "r") as f:
+        return f.read()
+    
+def __write_content_to_file(file_path: str, content: str) -> bool:
+    try:
+        with open(file_path, 'w') as f:
+            f.write(content)
+    except Exception as e:
+        print(f"Failed to write contents to {file_path}: {e}")
+        return False
+    
+    return True
+
+# generate_page("../content/index.md", "../template.html", "../public/index.html")
 # md = """### This is a header
 
 # This is a **bolded** paragraph
@@ -249,6 +307,11 @@ def __create_unordered_list_html_node(block_str: str) -> ParentNode:
 # the **same** even with inline stuff
 # ```
 # """
-
+# md = """
+# - Item 1
+# - Item 2
+# - Item 3
+# - Item 4
+# """
 # node = markdown_to_html_node(md)
 # print(node.to_html())
