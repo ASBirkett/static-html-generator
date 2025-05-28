@@ -8,15 +8,15 @@ import shutil
 SOURCE_DIR = './static'
 DESTINATION_DIR = './public'
 
-SOURCE_CONTENT = './content/index.md'
+SOURCE_CONTENT = './content'
 SOURCE_TEMPLATE = './template.html'
 
 def main():
-    if clear_folder_contents(SOURCE_DIR):
-        print("Clear complete")
+    if clear_folder_contents(DESTINATION_DIR):
+        print("Cleared destination directory complete")
         if copy_contents_of_source_to_destination(SOURCE_DIR, DESTINATION_DIR):
-            print("Copy complete")
-            generate_page(SOURCE_CONTENT, SOURCE_TEMPLATE, os.path.join(DESTINATION_DIR, "index.html"))
+            print("Copied static contents complete")
+            generate_pages_recursive(SOURCE_CONTENT, SOURCE_TEMPLATE, DESTINATION_DIR)
         else:
             print("Copy failed")
     else:
@@ -47,7 +47,7 @@ def clear_folder_contents(source_dir: str) -> bool:
     
     return True
 
-def copy_contents_of_source_to_destination(source_dir: str, destination_dir) -> bool:
+def copy_contents_of_source_to_destination(source_dir: str, destination_dir: str) -> bool:
     print(f"Validating source directory: {source_dir}")
     if(not os.path.exists(source_dir)):
         raise Exception("Source directory does not exist")
@@ -75,6 +75,35 @@ def copy_contents_of_source_to_destination(source_dir: str, destination_dir) -> 
         return False
 
     return True
+
+def generate_pages_recursive(source_dir: str, page_template: str, destination_dir: str) -> bool:
+    print(f"Validating source directory: {source_dir}")
+    if(not os.path.exists(source_dir)):
+        raise Exception("Source directory does not exist")
+    
+    print(f"Validating destination directory: {destination_dir}")
+    if(not os.path.exists(destination_dir)):
+        raise Exception("Destination directory does not exist")
+    
+    source_list = os.listdir(source_dir)
+    try:
+        for content in source_list:
+            current_src_path = os.path.join(source_dir, content)
+            current_dest_path = os.path.join(destination_dir, content)
+            if os.path.isdir(current_src_path):
+                print(f"Creating sub directory: {current_dest_path}")
+                os.mkdir(current_dest_path)
+                print(f"Going into directory: {current_dest_path}")
+                generate_pages_recursive(current_src_path, page_template, current_dest_path)
+            else:
+                filename = os.path.splitext(os.path.basename(current_src_path))[0]
+                generate_page(current_src_path, page_template, os.path.join(destination_dir, f"{filename}.html"))
+    except Exception as e:
+        print(f"An error has occurred while creating html pages from content files")
+        return False
+
+    return True
+    
 
 
 if __name__ == "__main__":
