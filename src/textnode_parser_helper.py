@@ -245,8 +245,8 @@ def generate_page(from_path: str, template_path: str, dest_path: str, basepath: 
 
     template_html = template_html.replace("{{ Title }}", f"{content_title}")
     template_html = template_html.replace("{{ Content }}", converted_markdown_html)
-    template_html = template_html.replace("href=/", f"href={basepath}")
-    template_html = template_html.replace("src=/", f"src={basepath}")
+    template_html = template_html.replace("href=\"/", f"href={basepath}")
+    template_html = template_html.replace("src=\"/", f"src={basepath}")
     
     dir_name = os.path.dirname(dest_path)
     if not os.path.exists(dir_name):
