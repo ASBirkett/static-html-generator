@@ -199,7 +199,6 @@ def __create_quote_html_node(block_str: str) -> ParentNode:
     final_quote_text = ""
     for quote_text in quote_texts:
         final_quote_text += quote_text.replace("> ", "")
-    print(final_quote_text)
     quote_text_node = TextNode(final_quote_text, TextType.TEXT)
     return ParentNode('blockquote', [text_node_to_html_node(quote_text_node)])
 
@@ -235,7 +234,7 @@ def extract_title(markdown) -> str:
     
     return split_header[2]
         
-def generate_page(from_path: str, template_path: str, dest_path: str):
+def generate_page(from_path: str, template_path: str, dest_path: str, basepath: str):
     print(f"Generating page from \"{from_path}\" to \"{dest_path}\" using \"{template_path}\" as the template")
     content_markdown = __read_content_from_file(from_path)
     template_html = __read_content_from_file(template_path)
@@ -246,6 +245,8 @@ def generate_page(from_path: str, template_path: str, dest_path: str):
 
     template_html = template_html.replace("{{ Title }}", f"{content_title}")
     template_html = template_html.replace("{{ Content }}", converted_markdown_html)
+    template_html = template_html.replace("href=/", f"href={basepath}")
+    template_html = template_html.replace("src=/", f"src={basepath}")
     
     dir_name = os.path.dirname(dest_path)
     if not os.path.exists(dir_name):
